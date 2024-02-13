@@ -1,0 +1,370 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using BlazorWebAppCrudJson.Models
+@inject NavigationManager NavigationManager;
+@code {
+
+    //https://learn.microsoft.com/en-us/aspnet/core/blazor/forms/?view=aspnetcore-8.0
+
+    [SupplyParameterFromForm]
+    public Article? Model { get; set; }
+
+
+    [SupplyParameterFromForm]
+    public Article? EditModel { get; set; }
+
+    private List<Article> objarticles;
+
+    private jsonData objjsonData = new jsonData();
+
+    private string rootpath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot/db/data.json");
+
+    protected override void OnInitialized()
+    {
+
+        Model ??= new();
+
+        EditModel ??= new();
+
+        BindData();
+
+    }
+
+    void BindData()
+    {
+        objarticles = new List<Article>();
+
+        objarticles = objjsonData.GetArticles(rootpath);
+    }
+
+    private void AddArticle()
+    {
+        //https://learn.microsoft.com/en-us/aspnet/core/blazor/forms/?view=aspnetcore-8.0
+
+
+        objjsonData.AddArticle(Model, rootpath);
+        NavigationManager.NavigateTo("/",true,true);
+    }
+
+    private void openEditingPanel(string id)
+    {
+        EditModel = objjsonData.GetArticles(rootpath).Where(u => u.id == id).FirstOrDefault();
+    }
+
+    private void EditArticle()
+    {
+        objjsonData.EditArticle(EditModel, rootpath);
+        NavigationManager.NavigateTo("/", true, true);
+    }
+
+    private void DeleteArticle(string id)
+    {
+        objjsonData.DeleteArticle(id, rootpath);
+        NavigationManager.NavigateTo("/", true, true);
+    }
+
+    public async Task LoadAddImage(InputFileChangeEventArgs inputFileChangeEventArgs)
+    {
+        var image = await inputFileChangeEventArgs.File.RequestImageFileAsync("image/png", 600, 600);
+
+        using Stream imageStream = image.OpenReadStream(1024 * 1024 * 10);
+
+        using MemoryStream ms = new();
+        //copy imageStream to Memory stream
+        await imageStream.CopyToAsync(ms);
+
+        //convert stream to base64
+        Model.articleimage = $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
+
+    public async Task LoadEditImage(InputFileChangeEventArgs inputFileChangeEventArgs)
+    {
+        var image = await inputFileChangeEventArgs.File.RequestImageFileAsync("image/png", 600, 600);
+
+        using Stream imageStream = image.OpenReadStream(1024 * 1024 * 10);
+
+        using MemoryStream ms = new();
+        //copy imageStream to Memory stream
+        await imageStream.CopyToAsync(ms);
+
+        //convert stream to base64
+        EditModel.articleimage = $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
+    }
+
+
+}
+<script type="text/javascript">
+    function confirmDelete(_id) {
+        if (confirm('Are you sure you want to delete this article?')) {
+            document.getElementById('hrefdel' + _id).click();
+        }
+    }
+</script>
+<PageTitle>CRUD</PageTitle>
+<div class="container">
+
+    <div class="row">
+        <div class="col-sm-9">
+            &nbsp;
+        </div>
+        <div class="col-sm-2 p-3">
+            <a href="javascript:void(0)" data-bs-toggle="modal" data-keyboard="false" data-backdrop="static" data-bs-target="#divAddArticle">Add New Article</a>
+        </div>
+        <div class="col-sm-1">
+            &nbsp;
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-1">
+            &nbsp;
+        </div>
+        <div class="col-sm-10">
+            <ul class='list-group'>
+                <li class='list-group-item fs-5 p-3 bg-primary text-white'>Article Listing</li>
+                @foreach (var objarticle in objarticles)
+                {
+                    <li class='list-group-item p-2'>
+                        <div class='row'>
+                            <div class='col-sm-10'>@objarticle.articletitle</div>
+                            <div class='col-sm-2 text-center'>
+                                <a href='javascript:void(0)' data-bs-toggle="modal" data-keyboard="false" data-backdrop="static" data-bs-target="#divEditArticle" @onclick="@(e => openEditingPanel(objarticle.id))">Edit</a>&nbsp;
+                                <a href='javascript:void(0)' onclick='confirmDelete(@objarticle.id)'>Delete</a>&nbsp;
+                                <a href="javascript:void(0)" id="hrefdel@(objarticle.id)" @onclick="@(e => DeleteArticle(objarticle.id))" style="display:none">Delete Final</a>
+                                <a href='/viewarticle/@objarticle.id' target='_blank'>View</a>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+        <div class="col-sm-1">
+            &nbsp;
+        </div>
+    </div>
+</div>
+
+<!--Add Article Modal-->
+<div class="modal fade" id="divAddArticle" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Add New Article</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="container">
+
+                    <div class="row">
+
+                        <div class="col-sm-12">
+
+                            <EditForm Model="Model" OnValidSubmit="AddArticle" FormName="formAddArticle">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articletitle" class="control-label">Title</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputText @bind-Value="Model!.articletitle" DisplayName="Title" required="required" id="articletitle" class="form-control" />
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articleauthor" class="control-label">Author</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputText @bind-Value="Model!.articleauthor" DisplayName="Author" required="required" id="articleauthor" class="form-control" />
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articlebody" class="control-label">Body</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputTextArea @bind-Value="Model!.articlebody" DisplayName="Body" required="required" id="articlebody" class="form-control" rows="5" cols="20" />
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        Article Image
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputFile OnChange="LoadAddImage" /><br />
+                                        <img src="@Model!.articleimage" class="img-fluid" style="max-width: 200px; margin-top: 5px" />
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12 text-center">
+                                        <input type="submit" value="Add" class="btn btn-danger" />
+                                    </div>
+
+                                </div>
+                            </EditForm>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Edit Article Modal-->
+<div class="modal fade" id="divEditArticle" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabelEdit">Edit Article</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <div class="container">
+
+                    <div class="row">
+
+                        <div class="col-sm-12">
+
+                            <EditForm Model="EditModel" OnSubmit="EditArticle" FormName="formEditArticle">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                
+                                <InputText @bind-Value="EditModel!.id" id="id" style="display:none" />
+
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articletitle" class="control-label">Title</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputText @bind-Value="EditModel!.articletitle" DisplayName="Title" required="required" id="articletitle" class="form-control" />
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articleauthor" class="control-label">Author</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputText @bind-Value="EditModel!.articleauthor" DisplayName="Author" required="required" id="articleauthor" class="form-control" />
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        <label for="articlebody" class="control-label">Body</label>
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputTextArea @bind-Value="EditModel!.articlebody" DisplayName="Body" required="required" id="articlebody" class="form-control" rows="5" cols="20" />
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-4">
+                                        Article Image
+                                    </div>
+                                    <div class="col-sm-8">
+                                        <InputFile OnChange="LoadEditImage" /><br />
+                                        <img src="@EditModel!.articleimage" class="img-fluid" style="max-width: 200px; margin-top: 5px" />
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12">
+                                        &nbsp;
+                                    </div>
+
+                                </div>
+
+                                <div class="row">
+
+                                    <div class="col-sm-12 text-center">
+                                        <input type="submit" value="Edit" class="btn btn-danger" />
+                                    </div>
+
+                                </div>
+                            </EditForm>
+
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

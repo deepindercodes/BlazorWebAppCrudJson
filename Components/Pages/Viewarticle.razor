@@ -1,0 +1,60 @@
+﻿@page "/viewarticle/{Id:int}"
+@using BlazorWebAppCrudJson.Models
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Article? Model;
+
+    private jsonData objjsonData = new jsonData();
+
+    private string rootpath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot/db/data.json");
+
+    protected override void OnInitialized()
+    {
+
+        BindData();
+
+    }
+
+    void BindData()
+    {
+        // objarticle = new Article();
+        Model = objjsonData.GetArticles(rootpath).Where(u => u.id == Id.ToString()).FirstOrDefault();
+    }
+}
+<style type="text/css">
+    .articleimg {
+        max-width: 200px;
+        margin: 15px;
+        float: left;
+    }
+</style>
+
+<div class="row">
+    <div class="col-sm-1">
+        &nbsp;
+    </div>
+    <div class="col-sm-10">
+        <ul class='list-group'>
+            <li class='list-group-item fs-5 p-3 bg-primary text-white'>
+                @Model.articletitle
+            </li>
+            <li class='list-group-item p-2'>
+                <p>
+                    @if (Model.articleimage != null)
+                    {
+                        <img id="imagArticlePreview" src="@Model.articleimage" class="iimg-fluid rounded articleimg" style="max-width: 200px; margin-top: 5px" />
+                    }
+                    <b>Author:</b>&nbsp;@Model.articleauthor<br />
+                    <b>Date (UTC):</b>&nbsp;@(Model.modifiedonutc != null ? Model.modifiedonutc : Model.createdonutc)<br />
+                    <br />
+                    @Model.articlebody
+                </p>
+            </li>
+        </ul>
+    </div>
+    <div class="col-sm-1">
+        &nbsp;
+    </div>
+</div>
